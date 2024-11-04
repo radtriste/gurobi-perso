@@ -5,32 +5,43 @@ from gurobipy import GRB
 
 # DATA
 
-max_points = 336
-decathlon_card_points = [6,11,16,22,27,53,79,84,94,105,131,157]
+max_value = 336
+cards = [5,10,15,20,25,50,75,80,90,100,125,150]
+card_values = pd.read_csv('data/card_values.csv', index_col=[0]).squeeze('columns')
 
-# MODEL
-m = gp.Model('cards')
 
-# vars
-decathlon_nb_cards = m.addVars(decathlon_card_points, vtype=GRB.INTEGER, name = "decathlon_card_points")
-# decathlon_total_per_card = m.addVars(decathlon_card_points, vtype=GRB.INTEGER, name = "decathlon_card_points")
+def solve(max_value, cards, card_values):
 
-# constraints
-# decathlon_max_points_per_card = m.addConstrs((v * decathlon_nb_cards[v] == decathlon_total_per_card[v] for v in decathlon_card_points), name = "max_points_per_card")
-# decathlon_max_points = m.addConstr((decathlon_total_per_card.sum() == max_points), name = "max_points")
-card_total = gp.quicksum(p*decathlon_nb_cards[p] for p in decathlon_card_points)
-m.addConstr(card_total == max_points, name = "card_total")
+    # MODEL
+    m = gp.Model('cards')
 
-m.update()
+    # vars
+    nb_cards = m.addVars(cards, vtype=GRB.INTEGER, name = "nb_cards")
 
-# m.setObjective(gp.quicksum(total_per_card[v] for v in card_points), GRB.MAXIMIZE)
-m.setObjective(decathlon_nb_cards.sum(), GRB.MINIMIZE)
+    # constraints
+    card_total = gp.quicksum(card_values[c]*nb_cards[c] for c in cards)
+    m.addConstr(card_total == max_value, name = "total_value")
 
-m.write('card_numbers.lp')
+    m.update()
 
-m.optimize()
+    m.setObjective(nb_cards.sum(), GRB.MINIMIZE)
 
-x_values = pd.Series(m.getAttr('X', decathlon_nb_cards), name = "nb_cards", index = decathlon_card_points)
-print(x_values)
+    def print_solution():
+        if m.status == GRB.OPTIMAL:
+            sol = pd.Series(m.getAttr("X", nb_cards), name = "buy_nb_cards", index = cards)
+            print(sol[sol > 0])
+        else:
+            print("No solution")
 
-# Solution => 2*131 + 2*22
+    # optionally, write out the model to a disc
+    m.write('card_numbers.lp')
+
+    # SOLVE & POSTPROCESS
+    # optimize
+    m.optimize()
+
+    print_solution()
+
+
+
+solve(max_value, cards, card_values) # Solution => 2*125 + 1*75
