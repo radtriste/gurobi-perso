@@ -34,7 +34,7 @@ def solve(max_value, cards, card_values):
             print("No solution")
 
     # optionally, write out the model to a disc
-    m.write('card_numbers.lp')
+    m.write('output/card_numbers.lp')
 
     # SOLVE & POSTPROCESS
     # optimize

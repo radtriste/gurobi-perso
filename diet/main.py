@@ -2,6 +2,7 @@
 import gurobipy as gp
 import pandas as pd
 from gurobipy import GRB
+import json
 
 # DATA
 # load or import data
@@ -71,13 +72,41 @@ def solve(categories, minNutrition, maxNutrition, foods, cost, nutritionValues):
             print("No solution")
 
     # optionally, write out the model to a disc
-    m.write('dietTest.lp')
+    m.write('output/dietTest.lp')
 
     # SOLVE & POSTPROCESS
     # optimize
     m.optimize()
 
-    print_solution()
+    # print_solution()
+
+    if m.Status != GRB.INFEASIBLE:
+        print("\nSolution values retrieval\n")
+
+        print("\n 1. JSON.\n")
+        sol = json.loads(m.getJSONSolution())
+        print(json.dumps(sol["Vars"], indent=4))
+
+        print("\n 2. Iterating.\n")
+        for v in m.getVars():
+            if v.X > 0:
+                print(f"{v.VarName}={v.X}")
+        
+        print("\n 3. Save to a file.\n")
+        m.write('output/diet.sol')
+        m.write('output/diet.json')
+    
+    print("\nSolution quality retrieval\n")
+    print("\n 1. JSON.\n")
+    sol = json.loads(m.getJSONSolution())
+    print(json.dumps(sol["SolutionInfo"], indent=4))
+
+    print("\n 2. Print Quality.\n")
+    m.printQuality()
+
+    print("\n 3. via model attributes.\n")
+    print(f"{m.MaxVio}=")
+    print(f"{m.ConstrVio}=")
 
 
 solve(categories, minNutrition, maxNutrition, foods, cost, nutrition)
